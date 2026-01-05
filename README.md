@@ -15,3 +15,4 @@
 
 ## 📸 Screenshots
 ![photo_2026-01-05_23-03-45](https://github.com/user-attachments/assets/52496fbc-b913-4637-b59f-feb01b8b261f)
+![photo_2026-01-05_23-28-46](https://github.com/user-attachments/assets/2fcb4ba0-3a2b-4f87-afdb-49f3e6560d34)
