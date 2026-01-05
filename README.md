@@ -14,4 +14,4 @@
 - **UI (Dashboard)**: WPF, XAML, MVVM pattern
 
 ## 📸 Screenshots
-![Uploading photo_2026-01-05_23-03-45.jpg…]()
+![photo_2026-01-05_23-03-45](https://github.com/user-attachments/assets/52496fbc-b913-4637-b59f-feb01b8b261f)
