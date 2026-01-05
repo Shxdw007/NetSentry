@@ -1,6 +1,6 @@
 # NetSentry 🛡️
 
-**NetSentry** is a real-time Remote Monitoring & Management (RMM) system designed with a Cyberpunk/DedSec aesthetic. Built with **.NET 8**, it allows administrators to monitor CPU, RAM, and Disk usage of multiple remote agents instantly.
+**NetSentry** is a real-time Remote Monitoring & Management (RMM) system designed with a Cyberpunk/DedSec aesthetic. Built with **.NET 10**, it allows administrators to monitor CPU, RAM, and Disk usage of multiple remote agents instantly.
 
 ## 🚀 Features
 - **Real-time Monitoring**: Uses **SignalR** (WebSockets) for instant data updates.
