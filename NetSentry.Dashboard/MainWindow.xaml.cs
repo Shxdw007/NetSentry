@@ -24,7 +24,7 @@ namespace NetSentry.Dashboard
         private async void InitializeSignalR()
         {
             // 1. Указываем адрес 
-            string serverUrl = "http://192.168.3.61:5000/rmmHub";
+            string serverUrl = "http://192.***.*.**:5000/rmmHub";
 
             connection = new HubConnectionBuilder()
                 .WithUrl(serverUrl)
