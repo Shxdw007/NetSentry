@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="NetSentry.Agent/NetSentry.Agent.csproj" />
+  <Project Path="NetSentry.Dashboard/NetSentry.Dashboard.csproj" />
+  <Project Path="NetSentry.Server/NetSentry.Server.csproj" />
+</Solution>
