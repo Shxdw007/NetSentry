@@ -1,18 +1,26 @@
 # NetSentry 🛡️
 
-**NetSentry** is a real-time Remote Monitoring & Management (RMM) system designed with a Cyberpunk/DedSec aesthetic. Built with **.NET 10**, it allows administrators to monitor CPU, RAM, and Disk usage of multiple remote agents instantly.
+**NetSentry** is a real-time Remote Monitoring & Management (RMM) system designed with a Cyberpunk/DedSec aesthetic. Built with **.NET 10**, it allows administrators to monitor CPU, RAM, GPU, and Storage usage of multiple remote agents instantly.
 
 ## 🚀 Features
+
 - **Real-time Monitoring**: Uses **SignalR** (WebSockets) for instant data updates.
-- **Cross-Platform Agent**: Collects system metrics (CPU, Memory, Disk).
-- **WPF Dashboard**: Modern UI with live charts and status indicators.
-- **DedSec Aesthetic**: Custom dark theme with neon accents.
+- **Hardware Recon**: Automatically detects **CPU & GPU models** and VRAM size using WMI.
+- **Multi-Drive Support**: Dynamically monitors all connected storage devices (HDD, SSD, USB).
+- **Cross-Platform Agent**: Collects system metrics (CPU, Memory, Disk) and hardware specs.
+- **WPF Dashboard**: Modern UI with live charts, hardware specs display, and status indicators.
+- **watch dogs game aesthetic**: Custom dark theme with neon accents and terminal-style fonts.
 
 ## 🛠️ Tech Stack
+
 - **Server**: ASP.NET Core Web API, SignalR Hub
-- **Client (Agent)**: .NET Console App, System.Diagnostics
-- **UI (Dashboard)**: WPF, XAML, MVVM pattern
+- **Client (Agent)**: .NET Console App, System.Diagnostics, System.Management (WMI)
+- **UI (Dashboard)**: WPF, XAML, MVVM pattern, JSON Serialization
 
 ## 📸 Screenshots
-![photo_2026-01-05_23-03-45](https://github.com/user-attachments/assets/52496fbc-b913-4637-b59f-feb01b8b261f)
-![photo_2026-01-05_23-28-46](https://github.com/user-attachments/assets/2fcb4ba0-3a2b-4f87-afdb-49f3e6560d34)
+![photo_1_2026-01-06_22-42-22](https://github.com/user-attachments/assets/7944c5c9-f1a7-442c-a086-ae5abb1bc9a7)
+![photo_2_2026-01-06_22-42-22](https://github.com/user-attachments/assets/9469c37f-4d3f-4a85-873d-e926b1550c5d)
+![photo_2026-01-06_19-51-08](https://github.com/user-attachments/assets/847735cc-b59e-4e27-82bc-2b31b8bdea65)
+
+
+
