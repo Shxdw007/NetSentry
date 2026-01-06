@@ -2,18 +2,29 @@
 
 public class RmmHub : Hub
 {
-    public async Task SendFullMetrics(
+    // Новый метод, который принимает полный фарш данных
+    public async Task SendUltraMetrics(
         string machineName,
         string userName,
         string osVersion,
         double cpu,
         double ramFree,
-        double diskTotal,
-        double diskFree)
+        string drivesJson,
+        string cpuName,    
+        string gpuName     
+        )
     {
-        await Clients.All.SendAsync("ReceiveFullMetrics",
-            machineName, userName, osVersion, cpu, ramFree, diskTotal, diskFree);
+        Console.WriteLine($"[DATA] {machineName} | CPU: {cpu:F0}% | Drives: JSON size {drivesJson.Length}");
 
-        Console.WriteLine($"[DATA] {machineName} updated.");
+        await Clients.All.SendAsync("ReceiveUltraMetrics",
+            machineName,
+            userName,
+            osVersion,
+            cpu,
+            ramFree,
+            drivesJson,
+            cpuName,
+            gpuName
+        );
     }
 }

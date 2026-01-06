@@ -1,12 +1,20 @@
 ﻿using Microsoft.AspNetCore.SignalR.Client;
 using System.Diagnostics;
+using System.Management;
+using System.Text.Json; 
 
-// 1. НАСТРОЙКИ
-string serverUrl = "http://192.***.*.**:5000/rmmHub"; 
+// НАСТРОЙКИ
+string serverUrl = "http://192.168.3.61:5000/rmmHub";
 
-Console.Title = "NetSentry AGENT [HIDDEN]";
-Console.ForegroundColor = ConsoleColor.Green;
-Console.WriteLine($"INITIALIZING UPLINK TO {serverUrl}...");
+Console.Title = "NetSentry AGENT [v2.1]";
+Console.ForegroundColor = ConsoleColor.Cyan;
+
+// Инициализация WMI (проверка железа)
+Console.WriteLine("[INIT] Scanning Hardware...");
+string cpuName = HardwareInfo.GetCpuName();
+string gpuName = HardwareInfo.GetGpuInfo();
+Console.WriteLine($"   > CPU: {cpuName}");
+Console.WriteLine($"   > GPU: {gpuName}");
 
 var connection = new HubConnectionBuilder()
     .WithUrl(serverUrl)
@@ -15,58 +23,101 @@ var connection = new HubConnectionBuilder()
 
 try
 {
+    Console.WriteLine($"[LINK] Connecting to {serverUrl}...");
     await connection.StartAsync();
-    Console.WriteLine(">> CONNECTION ESTABLISHED.");
+    Console.WriteLine("[LINK] CONNECTED!");
 }
 catch (Exception ex)
 {
     Console.ForegroundColor = ConsoleColor.Red;
-    Console.WriteLine($"!! LINK ERROR: {ex.Message}");
+    Console.WriteLine($"[ERROR] {ex.Message}");
     return;
 }
 
-// 2. ПОДГОТОВКА СЕНСОРОВ
+// Подготовка счетчиков
 var cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
 var ramCounter = new PerformanceCounter("Memory", "Available MBytes");
-cpuCounter.NextValue(); 
+cpuCounter.NextValue();
 await Task.Delay(1000);
 
-// 3. БЕСКОНЕЧНЫЙ ЦИКЛ ОТПРАВКИ
 while (true)
 {
     try
     {
-        // Данные о нагрузке
+        //  Сборка метриков
         float cpu = cpuCounter.NextValue();
         float ramFree = ramCounter.NextValue();
 
-        // Данные о системе
         string machineName = Environment.MachineName;
         string userName = Environment.UserName;
-        string osVersion = Environment.OSVersion.ToString(); 
+        string osVersion = Environment.OSVersion.ToString();
 
-        // Данные о диске C:\
-        var drive = new DriveInfo("C");
-        double diskTotalGb = drive.TotalSize / 1024.0 / 1024.0 / 1024.0;
-        double diskFreeGb = drive.AvailableFreeSpace / 1024.0 / 1024.0 / 1024.0;
+        // Сборка всех дисков
+        var drivesList = DriveInfo.GetDrives()
+            .Where(d => d.IsReady) 
+            .Select(d => new
+            {
+                Name = d.Name, 
+                Total = d.TotalSize / 1024.0 / 1024.0 / 1024.0,
+                Free = d.AvailableFreeSpace / 1024.0 / 1024.0 / 1024.0
+            })
+            .ToList();
 
-        // Отправляем всё пачкой на сервер
-        await connection.InvokeAsync("SendFullMetrics",
+        string drivesJson = JsonSerializer.Serialize(drivesList);
+
+        await connection.InvokeAsync("SendUltraMetrics",
             machineName,
             userName,
             osVersion,
             cpu,
             ramFree,
-            diskTotalGb,
-            diskFreeGb
+            drivesJson, 
+            gpuName,     
+            cpuName    
         );
 
-        Console.WriteLine($"[SENT] {machineName} | CPU: {cpu:F0}% | Disk Free: {diskFreeGb:F0} GB");
+        Console.Write($"\r[SEND] CPU:{cpu:00}% | RAM:{ramFree / 1024:F1}GB | DRIVES:{drivesList.Count} | GPU OK   ");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"[ERROR] {ex.Message}");
+        Console.WriteLine($"\n[ERROR] {ex.Message}");
     }
 
-    await Task.Delay(2000); 
+    await Task.Delay(2000);
+}
+
+//КЛАСС ДЛЯ РАБОТЫ С ЖЕЛЕЗОМ
+public static class HardwareInfo
+{
+    public static string GetGpuInfo()
+    {
+        if (!OperatingSystem.IsWindows()) return "Non-Windows GPU";
+        try
+        {
+            var searcher = new ManagementObjectSearcher("SELECT Name, AdapterRAM FROM Win32_VideoController");
+            foreach (var obj in searcher.Get())
+            {
+                string name = obj["Name"]?.ToString() ?? "Unknown";
+                long vram = 0;
+                try { vram = Convert.ToInt64(obj["AdapterRAM"]); } catch { }
+                double vramGb = vram / 1024.0 / 1024.0 / 1024.0;
+                return $"{name} ({vramGb:F1} GB)";
+            }
+        }
+        catch { return "GPU Error"; }
+        return "No GPU";
+    }
+
+    public static string GetCpuName()
+    {
+        if (!OperatingSystem.IsWindows()) return "Non-Windows CPU";
+        try
+        {
+            var searcher = new ManagementObjectSearcher("SELECT Name FROM Win32_Processor");
+            foreach (var obj in searcher.Get())
+                return obj["Name"]?.ToString()?.Trim() ?? "Unknown";
+        }
+        catch { return "CPU Error"; }
+        return "Unknown";
+    }
 }

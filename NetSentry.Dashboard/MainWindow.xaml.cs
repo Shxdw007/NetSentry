@@ -2,28 +2,26 @@
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Linq;
+using System.Text.Json; 
+using System.Collections.Generic;
 
 namespace NetSentry.Dashboard
 {
     public partial class MainWindow : Window
     {
         HubConnection connection;
-        // Коллекция, которая автоматически обновляет список на экране
+
         public ObservableCollection<MachineInfo> Machines { get; set; } = new ObservableCollection<MachineInfo>();
 
         public MainWindow()
         {
             InitializeComponent();
-
-            // Привязываем список к интерфейсу
-            MachinesList.ItemsSource = Machines;
-
+            MachinesList.ItemsSource = Machines; 
             InitializeSignalR();
         }
 
         private async void InitializeSignalR()
         {
-            // 1. Указываем адрес 
             string serverUrl = "http://192.168.3.61:5000/rmmHub";
 
             connection = new HubConnectionBuilder()
@@ -31,35 +29,49 @@ namespace NetSentry.Dashboard
                 .WithAutomaticReconnect()
                 .Build();
 
-            // 2."ReceiveFullMetrics"
-            connection.On<string, string, string, double, double, double, double>(
-                "ReceiveFullMetrics",
-                (name, user, os, cpu, ram, diskTotal, diskFree) =>
+            
+            connection.On<string, string, string, double, double, string, string, string>(
+                "ReceiveUltraMetrics",
+                (name, user, os, cpu, ram, drivesJson, cpuName, gpuName) =>
                 {
-                    // Обновляем UI только через Dispatcher
                     Application.Current.Dispatcher.Invoke(() =>
                     {
-                        // Ищем комп в списке
                         var machine = Machines.FirstOrDefault(m => m.Name == name);
-
-                        // Если компа нет — создаем новый
                         if (machine == null)
                         {
                             machine = new MachineInfo { Name = name };
                             Machines.Add(machine);
                         }
 
-                        // Заполняем ВСЕ данные
                         machine.UserName = user;
                         machine.OS = os;
                         machine.Cpu = cpu;
                         machine.RamFree = ram;
-                        machine.DiskTotal = diskTotal;
-                        machine.DiskFree = diskFree;
+
+                        
+                        machine.CpuName = cpuName;
+                        machine.GpuName = gpuName;
+
+                        try
+                        {
+                            var disks = JsonSerializer.Deserialize<List<DiskInfo>>(drivesJson);
+
+                           
+                            if (disks != null)
+                            {
+                                machine.Drives.Clear();
+                                foreach (var disk in disks)
+                                {
+                                    machine.Drives.Add(disk);
+                                }
+                            }
+                        }
+                        catch
+                        {
+                        }
                     });
                 });
 
-            // 3. Запускаем соединение
             try
             {
                 await connection.StartAsync();
@@ -67,9 +79,8 @@ namespace NetSentry.Dashboard
             }
             catch (System.Exception ex)
             {
-                MessageBox.Show($"Ошибка подключения к серверу: {ex.Message}");
+                MessageBox.Show($"Ошибка подключения: {ex.Message}");
             }
         }
-
     }
 }

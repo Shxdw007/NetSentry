@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Collections.ObjectModel; 
 
 namespace NetSentry.Dashboard
 {
@@ -7,13 +8,18 @@ namespace NetSentry.Dashboard
     {
         private double _cpu;
         private double _ramFree;
-        private double _diskFree;
-        private double _diskTotal;
 
-        
+        // Основная инфо
         public required string Name { get; set; }
         public string UserName { get; set; } = "Unknown";
         public string OS { get; set; } = "Windows";
+
+        // Железо 
+        public string CpuName { get; set; } = "Scanning...";
+        public string GpuName { get; set; } = "Scanning...";
+
+        
+        public ObservableCollection<DiskInfo> Drives { get; set; } = new ObservableCollection<DiskInfo>();
 
         public double Cpu
         {
@@ -27,29 +33,23 @@ namespace NetSentry.Dashboard
             set { _ramFree = value; OnPropertyChanged(); OnPropertyChanged(nameof(RamDisplay)); }
         }
 
-        public double DiskFree
-        {
-            get => _diskFree;
-            set { _diskFree = value; OnPropertyChanged(); OnPropertyChanged(nameof(DiskDisplay)); OnPropertyChanged(nameof(DiskUsagePercent)); }
-        }
-
-        public double DiskTotal
-        {
-            get => _diskTotal;
-            set { _diskTotal = value; OnPropertyChanged(); OnPropertyChanged(nameof(DiskUsagePercent)); }
-        }
-
-        
         public string CpuDisplay => $"{Cpu:F0}%";
         public string RamDisplay => $"{RamFree:F0} MB";
-        public string DiskDisplay => $"{DiskFree:F0} GB";
 
-        public double DiskUsagePercent => DiskTotal > 0 ? (1.0 - (DiskFree / DiskTotal)) * 100 : 0;
-
-        public event PropertyChangedEventHandler? PropertyChanged; // Добавь '?'
+        public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string? name = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
+    }
+
+    public class DiskInfo
+    {
+        public string Name { get; set; } // "C:\"
+        public double Total { get; set; }
+        public double Free { get; set; }
+
+        public double UsagePercent => Total > 0 ? (1.0 - (Free / Total)) * 100 : 0;
+        public string DisplayText => $"{Name} {Free:F0}GB free / {Total:F0}GB";
     }
 }
