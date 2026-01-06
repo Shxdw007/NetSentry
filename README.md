@@ -1,6 +1,6 @@
 # NetSentry 🛡️
 
-**NetSentry** is a real-time Remote Monitoring & Management (RMM) system designed with a Cyberpunk/DedSec aesthetic. Built with **.NET 10**, it allows administrators to monitor CPU, RAM, GPU, and Storage usage of multiple remote agents instantly.
+**NetSentry** is a real-time Remote Monitoring & Management (RMM). Built with **.NET 10**, it allows administrators to monitor CPU, RAM, GPU, and Storage usage of multiple remote agents instantly.
 
 ## 🚀 Features
 
@@ -9,7 +9,6 @@
 - **Multi-Drive Support**: Dynamically monitors all connected storage devices (HDD, SSD, USB).
 - **Cross-Platform Agent**: Collects system metrics (CPU, Memory, Disk) and hardware specs.
 - **WPF Dashboard**: Modern UI with live charts, hardware specs display, and status indicators.
-- **watch dogs game aesthetic**: Custom dark theme with neon accents and terminal-style fonts.
 
 ## 🛠️ Tech Stack
 
