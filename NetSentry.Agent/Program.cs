@@ -1,10 +1,17 @@
 ﻿using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Extensions.Configuration;
 using System.Diagnostics;
 using System.Management;
-using System.Text.Json; 
+using System.Text.Json;
+
 
 // НАСТРОЙКИ
-string serverUrl = "http://192.168.3.61:5000/rmmHub";
+var config = new ConfigurationBuilder()
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile("appsettings.json", optional: true)
+    .Build();
+
+string serverUrl = config["ServerUrl"] ?? "http://localhost:5000/rmmHub";
 
 Console.Title = "NetSentry AGENT [v2.1]";
 Console.ForegroundColor = ConsoleColor.Cyan;

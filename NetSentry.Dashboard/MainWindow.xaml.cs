@@ -1,9 +1,11 @@
 ﻿using Microsoft.AspNetCore.SignalR.Client;
-using System.Collections.ObjectModel;
-using System.Windows;
-using System.Linq;
-using System.Text.Json; 
+using Microsoft.Extensions.Configuration;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+using System.Windows;
 
 namespace NetSentry.Dashboard
 {
@@ -16,20 +18,25 @@ namespace NetSentry.Dashboard
         public MainWindow()
         {
             InitializeComponent();
-            MachinesList.ItemsSource = Machines; 
+            MachinesList.ItemsSource = Machines;
             InitializeSignalR();
         }
 
         private async void InitializeSignalR()
         {
-            string serverUrl = "http://192.168.3.61:5000/rmmHub";
+            var config = new ConfigurationBuilder()
+              .SetBasePath(Directory.GetCurrentDirectory())
+              .AddJsonFile("appsettings.json", optional: true)
+              .Build();
+
+            string serverUrl = config["ServerUrl"] ?? "http://localhost:5000/rmmHub";
 
             connection = new HubConnectionBuilder()
                 .WithUrl(serverUrl)
                 .WithAutomaticReconnect()
                 .Build();
 
-            
+
             connection.On<string, string, string, double, double, string, string, string>(
                 "ReceiveUltraMetrics",
                 (name, user, os, cpu, ram, drivesJson, cpuName, gpuName) =>
@@ -48,7 +55,7 @@ namespace NetSentry.Dashboard
                         machine.Cpu = cpu;
                         machine.RamFree = ram;
 
-                        
+
                         machine.CpuName = cpuName;
                         machine.GpuName = gpuName;
 
@@ -56,7 +63,7 @@ namespace NetSentry.Dashboard
                         {
                             var disks = JsonSerializer.Deserialize<List<DiskInfo>>(drivesJson);
 
-                           
+
                             if (disks != null)
                             {
                                 machine.Drives.Clear();
