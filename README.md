@@ -35,7 +35,7 @@ Create `appsettings.json` in agent folder:
 }
 ```
 
-###Dashboard Setup
+### Dashboard Setup
 Create appsettings.json in dashboard folder with same content
 ```json
 {
