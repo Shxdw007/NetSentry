@@ -1,6 +1,13 @@
 ﻿using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
+using NetSentry.Server.Data;
+
 
 var builder = WebApplication.CreateBuilder(args);
+
+// База данных PostgreSQL
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Настройка сервисов 
 builder.Services.AddSignalR();
