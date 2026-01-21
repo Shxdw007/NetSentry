@@ -36,7 +36,7 @@ namespace NetSentry.Dashboard
                 .WithAutomaticReconnect()
                 .Build();
 
-
+            // Основной обработчик метрик
             connection.On<string, string, string, double, double, string, string, string>(
                 "ReceiveUltraMetrics",
                 (name, user, os, cpu, ram, drivesJson, cpuName, gpuName) =>
@@ -54,15 +54,12 @@ namespace NetSentry.Dashboard
                         machine.OS = os;
                         machine.Cpu = cpu;
                         machine.RamFree = ram;
-
-
                         machine.CpuName = cpuName;
                         machine.GpuName = gpuName;
 
                         try
                         {
                             var disks = JsonSerializer.Deserialize<List<DiskInfo>>(drivesJson);
-
 
                             if (disks != null)
                             {
@@ -79,14 +76,72 @@ namespace NetSentry.Dashboard
                     });
                 });
 
+            //  Обработчик новой машины
+            connection.On<string>("MachineConnected", (machineName) =>
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    Console.WriteLine($"[DASHBOARD] Машина подключилась: {machineName}");
+                    var machine = Machines.FirstOrDefault(m => m.Name == machineName);
+                    if (machine != null)
+                    {
+                        machine.Status = "Online";
+                        UpdateMachineStatusUI(machine);
+                    }
+                });
+            });
+
+            // Обработчик переподключения
+            connection.On<string>("MachineReconnected", (machineName) =>
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    Console.WriteLine($"[DASHBOARD] Машина переподключилась: {machineName}");
+                    var machine = Machines.FirstOrDefault(m => m.Name == machineName);
+                    if (machine != null)
+                    {
+                        machine.Status = "Online";
+                    }
+                });
+            });
+
+            //  Обработчик отключения всех машин
+            connection.On("AllMachinesOffline", () =>
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    Console.WriteLine($"[DASHBOARD] Все машины offline");
+                    foreach (var machine in Machines)
+                    {
+                        machine.Status = "Offline";
+                    }
+                });
+            });
+
             try
             {
                 await connection.StartAsync();
                 Title = "NetSentry // Big brother is watching you";
+                Console.WriteLine("[DASHBOARD] Подключено к серверу");
             }
             catch (System.Exception ex)
             {
                 MessageBox.Show($"Ошибка подключения: {ex.Message}");
+            }
+        }
+        private void UpdateMachineStatusUI(MachineInfo machine)
+        {
+            if (machine.Status == "Online")
+            {
+                // Зелёный
+                // StatusBorder.Background = новый цвет
+                // StatusBorder.BorderBrush = #00FF41
+            }
+            else
+            {
+                // Красный
+                // StatusBorder.Background = новый цвет
+                // StatusBorder.BorderBrush = #FF0000
             }
         }
     }

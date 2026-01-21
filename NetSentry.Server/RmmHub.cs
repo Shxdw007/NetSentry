@@ -13,15 +13,39 @@ public class RmmHub : Hub
         _db = db;
     }
 
-    // Модель для одного диска, чтобы распарсить JSON от агента
+    // Отслеживание подключения
+    public override async Task OnConnectedAsync()
+    {
+        Console.WriteLine($"[CONNECT] Client connected: {Context.ConnectionId}");
+        await base.OnConnectedAsync();
+    }
+
+    //  Отслеживание отключения
+    public override async Task OnDisconnectedAsync(Exception? exception)
+    {
+        Console.WriteLine($"[DISCONNECT] Client disconnected: {Context.ConnectionId}");
+
+        // Ставим все машины на "Offline"
+        var machines = await _db.Machines.ToListAsync();
+        foreach (var machine in machines)
+        {
+            machine.Status = "Offline";
+        }
+        await _db.SaveChangesAsync();
+
+        // Уведомляем всех что произошло отключение
+        await Clients.All.SendAsync("AllMachinesOffline");
+
+        await base.OnDisconnectedAsync(exception);
+    }
+
     public class DriveInfoDto
     {
-        public string DriveName { get; set; } = null!;   // "C:"
+        public string DriveName { get; set; } = null!;
         public double TotalSizeGb { get; set; }
         public double FreeSizeGb { get; set; }
     }
 
-    // Агент вызывает этот метод (ранее назывался SendUltraMetrics)
     public async Task SendUltraMetrics(
         string machineName,
         string userName,
@@ -33,6 +57,7 @@ public class RmmHub : Hub
         string gpuName
     )
     {
+        Console.WriteLine($"[SERVER DEBUG] drivesJson = {drivesJson}");
         Console.WriteLine($"[DATA] {machineName} | CPU: {cpu:F0}% | Drives JSON size {drivesJson.Length}");
 
         // 1. Находим или создаём запись о машине
@@ -47,20 +72,26 @@ public class RmmHub : Hub
                 CpuName = cpuName,
                 GpuName = gpuName,
                 OsVersion = osVersion,
-                Status = "Online",
+                Status = "Online",  // ← НОВАЯ машина = Online
                 FirstConnected = DateTime.UtcNow,
                 LastConnected = DateTime.UtcNow
             };
 
             _db.Machines.Add(machine);
+
+            // ← ДОБАВЬ: Уведомляем что новая машина подключилась
+            await Clients.All.SendAsync("MachineConnected", machineName);
         }
         else
         {
             machine.CpuName = cpuName;
             machine.GpuName = gpuName;
             machine.OsVersion = osVersion;
-            machine.Status = "Online";
+            machine.Status = "Online";  // ← Переводим обратно в Online
             machine.LastConnected = DateTime.UtcNow;
+
+            // ← ДОБАВЬ: Уведомляем что машина переподключилась
+            await Clients.All.SendAsync("MachineReconnected", machineName);
         }
 
         // 2. Сохраняем метрику
@@ -74,8 +105,6 @@ public class RmmHub : Hub
         _db.Metrics.Add(metric);
 
         // 3. Обновляем информацию по дискам из JSON
-        // Ожидаемый формат drivesJson: 
-        // [ { "DriveName":"C:", "TotalSizeGb":476, "FreeSizeGb":147 }, ... ]
         List<DriveInfoDto>? drives = null;
         try
         {
@@ -118,7 +147,7 @@ public class RmmHub : Hub
 
         await _db.SaveChangesAsync();
 
-        // 4. По‑прежнему рассылаем данные на дашборд, как было раньше
+        // 4. Рассылаем данные на дашборд
         await Clients.All.SendAsync("ReceiveUltraMetrics",
             machineName,
             userName,

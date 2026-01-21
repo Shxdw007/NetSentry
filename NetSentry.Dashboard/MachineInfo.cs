@@ -8,6 +8,7 @@ namespace NetSentry.Dashboard
     {
         private double _cpu;
         private double _ramFree;
+        private string _status = "Online";
 
         // Основная инфо
         public required string Name { get; set; }
@@ -18,7 +19,16 @@ namespace NetSentry.Dashboard
         public string CpuName { get; set; } = "Scanning...";
         public string GpuName { get; set; } = "Scanning...";
 
-        
+        public string Status
+        {
+            get => _status;
+            set { _status = value; OnPropertyChanged(); }
+        }
+
+        public string StatusDisplay => Status == "Online"
+           ? "🟢 Online"
+           : "🔴 Offline";
+
         public ObservableCollection<DiskInfo> Drives { get; set; } = new ObservableCollection<DiskInfo>();
 
         public double Cpu
@@ -45,11 +55,12 @@ namespace NetSentry.Dashboard
 
     public class DiskInfo
     {
-        public string Name { get; set; } // "C:\"
-        public double Total { get; set; }
-        public double Free { get; set; }
+        public string DriveName { get; set; }      // ← НОВОЕ: DriveName
+        public double TotalSizeGb { get; set; }    // ← НОВОЕ: TotalSizeGb
+        public double FreeSizeGb { get; set; }     // ← НОВОЕ: FreeSizeGb
 
-        public double UsagePercent => Total > 0 ? (1.0 - (Free / Total)) * 100 : 0;
-        public string DisplayText => $"{Name} {Free:F0}GB free / {Total:F0}GB";
+        public double UsagePercent => TotalSizeGb > 0 ? (1.0 - (FreeSizeGb / TotalSizeGb)) * 100 : 0;
+        public string DisplayText => $"{DriveName} {FreeSizeGb:F0}GB free / {TotalSizeGb:F0}GB";
     }
+
 }

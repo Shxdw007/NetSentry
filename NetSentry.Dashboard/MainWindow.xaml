@@ -49,10 +49,8 @@
                                 <TextBlock Text="{Binding UserName, StringFormat='USER: {0}'}" Foreground="#888" Margin="0,5,0,0"/>
                                 <TextBlock Text="{Binding OS}" Foreground="#555" FontSize="10" TextWrapping="Wrap" Margin="0,2,0,10"/>
 
-                                <!-- Статус -->
-                                <Border Background="#003300" BorderBrush="#00FF41" BorderThickness="1" HorizontalAlignment="Left" Padding="5,2" CornerRadius="3" Margin="0,0,0,10">
-                                    <TextBlock Text="ONLINE" FontSize="10" Foreground="White" FontWeight="Bold"/>
-                                </Border>
+                               
+                                <!-- ← СТАТУСА -->
 
                                 <!-- Инфо о железе (CPU/GPU) -->
                                 <TextBlock Text="HARDWARE SPECS:" FontSize="10" Foreground="#444" Margin="0,5,0,2"/>
@@ -77,18 +75,17 @@
                                     <ProgressBar Value="{Binding RamFree}" Maximum="16000" Height="6" Background="#222" Foreground="#00AAFF" BorderThickness="0"/>
                                 </DockPanel>
 
-                                <!--  Список дисков  -->
+                                <!-- Список дисков -->
                                 <ItemsControl ItemsSource="{Binding Drives}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <DockPanel Margin="0,0,0,5">
                                                 <!-- Имя диска -->
-                                                <TextBlock Text="{Binding Name}" Width="70" Foreground="#AAA"/>
+                                                <TextBlock Text="{Binding DriveName}" Width="70" Foreground="#AAA"/>
 
-                                                <!-- Текст  -->
+                                                <!-- Текст -->
                                                 <TextBlock Text="{Binding DisplayText}" DockPanel.Dock="Right" Width="120" Foreground="White" FontSize="10" TextAlignment="Right"/>
 
-                                                
                                                 <ProgressBar Value="{Binding UsagePercent, Mode=OneWay}" Maximum="100" Height="6" Background="#222" Foreground="#FFAA00" BorderThickness="0"/>
                                             </DockPanel>
                                         </DataTemplate>

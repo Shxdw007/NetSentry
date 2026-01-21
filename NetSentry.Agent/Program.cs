@@ -41,17 +41,20 @@ catch (Exception ex)
     return;
 }
 
-// Подготовка счетчиков
+// Подготовка счётчиков
 var cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
 var ramCounter = new PerformanceCounter("Memory", "Available MBytes");
 cpuCounter.NextValue();
 await Task.Delay(1000);
 
+// Счётчик для сохранения в БД (каждые 30 секунд)
+int dbSaveCounter = 0;
+
 while (true)
 {
     try
     {
-        //  Сборка метриков
+        // Сборка метрик
         float cpu = cpuCounter.NextValue();
         float ramFree = ramCounter.NextValue();
 
@@ -61,27 +64,37 @@ while (true)
 
         // Сборка всех дисков
         var drivesList = DriveInfo.GetDrives()
-            .Where(d => d.IsReady) 
+            .Where(d => d.IsReady)
             .Select(d => new
             {
-                Name = d.Name, 
-                Total = d.TotalSize / 1024.0 / 1024.0 / 1024.0,
-                Free = d.AvailableFreeSpace / 1024.0 / 1024.0 / 1024.0
+                DriveName = d.Name,  
+                TotalSizeGb = d.TotalSize / 1024.0 / 1024.0 / 1024.0,
+                FreeSizeGb = d.AvailableFreeSpace / 1024.0 / 1024.0 / 1024.0
             })
             .ToList();
 
         string drivesJson = JsonSerializer.Serialize(drivesList);
 
+        // ОТПРАВЛЯЕМ НА ДАШБОРД (каждую секунду)
         await connection.InvokeAsync("SendUltraMetrics",
             machineName,
             userName,
             osVersion,
             cpu,
             ramFree,
-            drivesJson, 
-            gpuName,     
-            cpuName    
+            drivesJson,
+            gpuName,
+            cpuName
         );
+
+        // Счётчик для БД
+        dbSaveCounter++;
+
+        if (dbSaveCounter >= 30)
+        {
+            Console.WriteLine($"[DB SAVE] Сохранено в БД: CPU:{cpu:00}% | RAM:{ramFree / 1024:F1}GB | Drives:{drivesList.Count}");
+            dbSaveCounter = 0;
+        }
 
         Console.Write($"\r[SEND] CPU:{cpu:00}% | RAM:{ramFree / 1024:F1}GB | DRIVES:{drivesList.Count} | GPU OK   ");
     }
@@ -90,8 +103,9 @@ while (true)
         Console.WriteLine($"\n[ERROR] {ex.Message}");
     }
 
-    await Task.Delay(2000);
+    await Task.Delay(1000);
 }
+
 
 //КЛАСС ДЛЯ РАБОТЫ С ЖЕЛЕЗОМ
 public static class HardwareInfo
