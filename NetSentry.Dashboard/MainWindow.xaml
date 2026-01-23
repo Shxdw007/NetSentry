@@ -50,8 +50,11 @@
                                 <TextBlock Text="{Binding OS}" Foreground="#555" FontSize="10" TextWrapping="Wrap" Margin="0,2,0,10"/>
 
                                
-                                <!-- ← СТАТУСА -->
-
+                                <!-- Статус -->
+                                <Border Background="#003300" BorderBrush="#00FF41" BorderThickness="1" HorizontalAlignment="Left" Padding="5,2" CornerRadius="3" Margin="0,0,0,10">
+                                    <TextBlock Text="ONLINE" FontSize="10" Foreground="White" FontWeight="Bold"/>
+                                </Border>
+                                
                                 <!-- Инфо о железе (CPU/GPU) -->
                                 <TextBlock Text="HARDWARE SPECS:" FontSize="10" Foreground="#444" Margin="0,5,0,2"/>
                                 <TextBlock Text="{Binding CpuName}" FontSize="10" Foreground="#888" TextWrapping="Wrap"/>
