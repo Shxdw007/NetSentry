@@ -1,0 +1,56 @@
+<Window x:Class="NetSentry.Dashboard.LoginWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="NetSentry Login" Height="450" Width="400"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None" ResizeMode="NoResize"
+        Background="#1E1E1E" AllowsTransparency="True">
+    
+    <Border CornerRadius="15" BorderBrush="#00FF99" BorderThickness="1">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Заголовок / Drag bar -->
+            <Border Grid.Row="0" Background="#252526" CornerRadius="15,15,0,0" Padding="10" MouseDown="Border_MouseDown">
+                <TextBlock Text="NetSentry Access" Foreground="#00FF99" 
+                           FontFamily="Consolas" FontWeight="Bold" HorizontalAlignment="Center"/>
+            </Border>
+
+            <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="40">
+                <!-- Логотип или иконка -->
+                <TextBlock Text="🔒" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,20" Foreground="#00FF99"/>
+
+                <!-- Поле логина -->
+                <TextBlock Text="USERNAME" Foreground="Gray" FontFamily="Consolas" FontSize="12" Margin="0,0,0,5"/>
+                <TextBox x:Name="UsernameBox" Height="35" Background="#333337" Foreground="White" 
+                         BorderThickness="0" Padding="5" FontSize="14" VerticalContentAlignment="Center"/>
+
+                <!-- Поле пароля -->
+                <TextBlock Text="PASSWORD" Foreground="Gray" FontFamily="Consolas" FontSize="12" Margin="0,20,0,5"/>
+                <PasswordBox x:Name="PasswordBox" Height="35" Background="#333337" Foreground="White" 
+                             BorderThickness="0" Padding="5" FontSize="14" VerticalContentAlignment="Center"/>
+
+                <!-- Ошибка -->
+                <TextBlock x:Name="ErrorText" Foreground="#FF5555" FontFamily="Consolas" 
+                           HorizontalAlignment="Center" Margin="0,15,0,0" TextWrapping="Wrap"/>
+
+                <!-- Кнопка входа -->
+                <Button Content="CONNECT" Click="LoginButton_Click" Height="40" Margin="0,30,0,0"
+                        Background="#00FF99" Foreground="Black" FontWeight="Bold" FontFamily="Consolas"
+                        BorderThickness="0" Cursor="Hand">
+                    <Button.Resources>
+                        <Style TargetType="Border">
+                            <Setter Property="CornerRadius" Value="5"/>
+                        </Style>
+                    </Button.Resources>
+                </Button>
+
+                <Button Content="Exit" Click="ExitButton_Click" Background="Transparent" Foreground="Gray"
+                        BorderThickness="0" Margin="0,10,0,0" Cursor="Hand"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>
