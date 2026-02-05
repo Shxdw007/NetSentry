@@ -1,6 +1,28 @@
-@NetSentry.Server_HostAddress = http://localhost:5189
+@NetSentry.Server_HostAddress = http://localhost:5000
 
-GET {{NetSentry.Server_HostAddress}}/weatherforecast/
-Accept: application/json
+# 1. Регистрация нового пользователя (Админа)
+POST {{NetSentry.Server_HostAddress}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "mysecretpassword123"
+}
 
 ###
+
+# 2. Вход (Получение токена)
+POST {{NetSentry.Server_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "mysecretpassword123"
+}
+
+###
+
+# 3. Пример запроса к защищенному ресурсу (пока у нас их нет, но будет работать на будущее)
+# Скопируй токен из ответа выше и вставь вместо "ТВОЙ_ТОКЕН"
+# GET {{NetSentry.Server_HostAddress}}/api/machines
+# Authorization: Bearer ТВОЙ_ТОКЕН
