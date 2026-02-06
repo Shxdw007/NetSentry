@@ -12,15 +12,14 @@ namespace NetSentry.Dashboard
     public partial class MainWindow : Window
     {
         HubConnection connection;
-        private readonly string _authToken; // ✅ ДОБАВЛЕНО: Поле для токена
+        private readonly string _authToken; 
 
         public ObservableCollection<MachineInfo> Machines { get; set; } = new ObservableCollection<MachineInfo>();
 
-        // ✅ ОБНОВЛЕНО: Новый конструктор с параметром token
         public MainWindow(string token)
         {
             InitializeComponent();
-            _authToken = token; // ✅ Сохраняем токен
+            _authToken = token; // 
             MachinesList.ItemsSource = Machines;
             InitializeSignalR();
         }
@@ -34,7 +33,6 @@ namespace NetSentry.Dashboard
 
             string serverUrl = config["ServerUrl"] ?? "http://localhost:5000/rmmHub";
 
-            // ✅ ВАЖНО: Добавляем токен в подключение SignalR
             connection = new HubConnectionBuilder()
                 .WithUrl(serverUrl, options =>
                 {

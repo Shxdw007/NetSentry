@@ -5,8 +5,8 @@
         WindowStartupLocation="CenterScreen"
         WindowStyle="None" ResizeMode="NoResize"
         Background="#1E1E1E" AllowsTransparency="True">
-    
-    <Border CornerRadius="15" BorderBrush="#00FF99" BorderThickness="1">
+
+    <Border CornerRadius="15" BorderBrush="#00FF41" BorderThickness="1">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -15,13 +15,13 @@
 
             <!-- Заголовок / Drag bar -->
             <Border Grid.Row="0" Background="#252526" CornerRadius="15,15,0,0" Padding="10" MouseDown="Border_MouseDown">
-                <TextBlock Text="NetSentry Access" Foreground="#00FF99" 
+                <TextBlock Text="NetSentry" Foreground="#00FF41" 
                            FontFamily="Consolas" FontWeight="Bold" HorizontalAlignment="Center"/>
             </Border>
 
             <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="40">
                 <!-- Логотип или иконка -->
-                <TextBlock Text="🔒" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,20" Foreground="#00FF99"/>
+                <TextBlock Text="🔒" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,20" Foreground="#00FF41"/>
 
                 <!-- Поле логина -->
                 <TextBlock Text="USERNAME" Foreground="Gray" FontFamily="Consolas" FontSize="12" Margin="0,0,0,5"/>
@@ -39,7 +39,7 @@
 
                 <!-- Кнопка входа -->
                 <Button Content="CONNECT" Click="LoginButton_Click" Height="40" Margin="0,30,0,0"
-                        Background="#00FF99" Foreground="Black" FontWeight="Bold" FontFamily="Consolas"
+                        Background="#00FF41" Foreground="Black" FontWeight="Bold" FontFamily="Consolas"
                         BorderThickness="0" Cursor="Hand">
                     <Button.Resources>
                         <Style TargetType="Border">
