@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="NetSentry.Admin/NetSentry.Admin.csproj" Id="7fba5568-913b-4d56-b28d-b5347f82780e" />
   <Project Path="NetSentry.Agent/NetSentry.Agent.csproj" />
   <Project Path="NetSentry.Dashboard/NetSentry.Dashboard.csproj" />
   <Project Path="NetSentry.Server/NetSentry.Server.csproj" />
