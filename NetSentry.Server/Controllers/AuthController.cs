@@ -45,7 +45,7 @@ namespace NetSentry.Server.Controllers
             {
                 Username = request.Username,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-                Role = "Admin" // Первый пользователь - админ, дальше можно менять логику
+                Role = "Admin" 
             };
 
             _context.Users.Add(user);
