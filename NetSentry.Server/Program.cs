@@ -54,6 +54,10 @@ builder.Services.AddCors(options => options.AddPolicy("AllowAll", policy =>
           .AllowCredentials();
 }));
 
+builder.Services.AddSwaggerGen();
+
+
+
 var app = builder.Build();
 
 // Настройка пайплайна 
@@ -71,4 +75,9 @@ app.MapHub<RmmHub>("/rmmHub");
 app.Urls.Add("http://0.0.0.0:5000");
 
 Console.WriteLine("Сервер запущен! Ожидание подключений на порту 5000...");
+if(app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 app.Run();
