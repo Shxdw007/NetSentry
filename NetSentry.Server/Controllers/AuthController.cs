@@ -1,11 +1,12 @@
+using BCrypt.Net;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using NetSentry.Server.Data;
 using NetSentry.Server.Models;
-using BCrypt.Net;
-using System.Security.Claims;
+using NetSentry.Server.Models.Responses;
 using System.IdentityModel.Tokens.Jwt;
-using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
 using System.Text;
 
 namespace NetSentry.Server.Controllers
@@ -35,36 +36,42 @@ namespace NetSentry.Server.Controllers
             public string Password { get; set; } = string.Empty;
         }
 
+        // В AuthController.cs
+
         [HttpPost("register")]
         public async Task<IActionResult> Register(RegisterDto request)
         {
             if (await _context.Users.AnyAsync(u => u.Username == request.Username))
-                return BadRequest("Пользователь уже существует");
+                return BadRequest(ApiResponse<object>.Error("Пользователь уже существует"));
 
             var user = new User
             {
                 Username = request.Username,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-                Role = "Admin" 
+                Role = "User" // По умолчанию выдаем роль User
             };
 
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
-            return Ok("Пользователь успешно зарегистрирован");
+            return Ok(ApiResponse<object>.Ok(null, "Пользователь успешно зарегистрирован"));
         }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginDto request)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == request.Username);
-            if (user == null) return BadRequest("Пользователь не найден");
+            if (user == null)
+                return BadRequest(ApiResponse<object>.Error("Пользователь не найден"));
 
             if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
-                return BadRequest("Неверный пароль");
+                return BadRequest(ApiResponse<object>.Error("Неверный пароль"));
 
             string token = CreateToken(user);
-            return Ok(new { token, role = user.Role });
+
+            // Возвращаем токен и роль в стандартизированном виде
+            var responseData = new { Token = token, Role = user.Role };
+            return Ok(ApiResponse<object>.Ok(responseData, "Успешная авторизация"));
         }
 
         private string CreateToken(User user)
