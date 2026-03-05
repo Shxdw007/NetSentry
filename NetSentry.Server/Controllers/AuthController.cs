@@ -68,10 +68,19 @@ namespace NetSentry.Server.Controllers
                 return BadRequest(ApiResponse<object>.Error("Неверный пароль"));
 
             string token = CreateToken(user);
-
+           
+            Response.Cookies.Append("AuthToken", token, new CookieOptions { HttpOnly = true });
+           
             // Возвращаем токен и роль в стандартизированном виде
             var responseData = new { Token = token, Role = user.Role };
             return Ok(ApiResponse<object>.Ok(responseData, "Успешная авторизация"));
+        }
+        [HttpPost("logout")]
+        public IActionResult Logout()
+        {
+            
+            Response.Cookies.Delete("AuthToken");
+            return Ok(new { success = true, message = "Вы успешно вышли из системы" }); 
         }
 
         private string CreateToken(User user)

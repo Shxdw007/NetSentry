@@ -19,7 +19,7 @@ namespace NetSentry.Dashboard
         public MainWindow(string token)
         {
             InitializeComponent();
-            _authToken = token; // 
+            _authToken = token; 
             MachinesList.ItemsSource = Machines;
             InitializeSignalR();
         }

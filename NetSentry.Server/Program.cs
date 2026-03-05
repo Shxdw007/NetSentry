@@ -56,12 +56,22 @@ builder.Services.AddCors(options => options.AddPolicy("AllowAll", policy =>
 
 builder.Services.AddSwaggerGen();
 
-
-
 var app = builder.Build();
 
 // Настройка пайплайна 
 app.UseCors("AllowAll");
+
+// Если браузер передал куки с токеном, подставляем его в заголовок Authorization
+app.Use(async (context, next) =>
+{
+    var token = context.Request.Cookies["AuthToken"];
+    if (!string.IsNullOrEmpty(token) && !context.Request.Headers.ContainsKey("Authorization"))
+    {
+        context.Request.Headers["Authorization"] = "Bearer " + token;
+    }
+    await next();
+});
+
 
 app.UseAuthentication(); // 1. Кто ты?
 app.UseAuthorization();  // 2. Можно ли тебе сюда?
@@ -75,7 +85,7 @@ app.MapHub<RmmHub>("/rmmHub");
 app.Urls.Add("http://0.0.0.0:5000");
 
 Console.WriteLine("Сервер запущен! Ожидание подключений на порту 5000...");
-if(app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
