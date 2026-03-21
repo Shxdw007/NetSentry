@@ -9,7 +9,8 @@ The system features a centralized ASP.NET Core REST API, robust PostgreSQL data 
 * **Real-time Monitoring:** Uses **SignalR** (WebSockets) for instant, sub-second data updates across all connected clients.
 * **Smart DB Throttling:** Metrics are sent to the UI instantly, but saved to the **PostgreSQL** database only once every 30 seconds to prevent database overload and optimize performance.
 * **Role-Based Access Control (RBAC):** Secure JWT authentication with user roles (Admin, Viewer) to restrict access to the API and dashboards.
-* **Dual Dashboards:** * 🌐 **Blazor Web Dashboard:** A dynamic, standalone browser application featuring a custom "DedSec" hacker aesthetic, real-time progress bars, and responsive design.
+* **Dual Dashboards:**
+    * 🌐 **Blazor Web Dashboard:** A dynamic, standalone browser application featuring a custom "DedSec" hacker aesthetic, real-time progress bars, and responsive design.
     * 🖥️ **WPF Desktop Dashboard:** Modern desktop UI with live charts and hardware spec displays.
 * **Admin Console Utility:** A dedicated CLI tool for administrators to easily create, update, delete users, and assign roles directly in the database.
 * **RESTful API & Swagger:** Fully documented REST API with Swagger UI integration for easy testing of CRUD operations.
