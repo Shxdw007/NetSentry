@@ -1,0 +1,219 @@
+﻿@page "/dashboard"
+@using Microsoft.AspNetCore.SignalR.Client
+@using System.Text.Json
+@implements IAsyncDisposable
+@inject HttpClient Http
+@inject NavigationManager NavManager
+
+<PageTitle>NetSentry // DASHBOARD</PageTitle>
+
+<div class="container-fluid mt-4">
+    <h2 class="mb-4" style="color: #00ff00; text-shadow: 0 0 10px #00ff00; letter-spacing: 2px;">
+        > АКТИВНЫЕ УЗЛЫ СЕТИ_
+    </h2>
+
+    @if (isLoading)
+    {
+        <div style="color: #00ff00;">> СКАНИРОВАНИЕ СЕТИ... ПОДОЖДИТЕ...</div>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div style="color: #ff003c; text-shadow: 0 0 5px #ff003c;">> ОШИБКА: @errorMessage</div>
+    }
+    else
+    {
+        <div class="row">
+            @foreach (var pc in machines.Values)
+            {
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card p-3" style="border: 1px solid @(pc.Status == "Online" ? "#00ff00" : "#555") !important;">
+                        <div class="d-flex justify-content-between align-items-start border-bottom border-secondary mb-2 pb-2">
+                            <div>
+                                <h4 class="mb-0" style="color: #fff;">@pc.Name</h4>
+                                <small style="color: #888;">@pc.OsVersion</small>
+                            </div>
+                            <span class="badge" style="background-color: @(pc.Status == "Online" ? "#004400" : "#333"); color: @(pc.Status == "Online" ? "#00ff00" : "#888"); border: 1px solid @(pc.Status == "Online" ? "#00ff00" : "#555");">
+                                @pc.Status.ToUpper()
+                            </span>
+                        </div>
+
+                        <div style="font-size: 0.85rem; color: #aaa;" class="mb-3">
+                            <div>> CPU: @pc.CpuName</div>
+                            <div>> GPU: @pc.GpuName</div>
+                        </div>
+
+                        @if (pc.Status == "Online")
+                        {
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between text-white" style="font-size: 0.8rem;">
+                                    <span>CPU LOAD</span>
+                                    <span>@pc.CurrentCpu.ToString("0")%</span>
+                                </div>
+                                <div class="progress" style="height: 6px; background-color: #222; border-radius: 0;">
+                                    <div class="progress-bar" style="width: @pc.CurrentCpu.ToString("0")%; background-color: #ff003c; box-shadow: 0 0 5px #ff003c;"></div>
+                                </div>
+                            </div>
+
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between text-white" style="font-size: 0.8rem;">
+                                    <span>RAM FREE</span>
+                                    <span>@pc.CurrentRamFree.ToString("0") MB</span>
+                                </div>
+                                <div class="progress" style="height: 6px; background-color: #222; border-radius: 0;">
+                                    <div class="progress-bar" style="width: 100%; background-color: #0088ff; box-shadow: 0 0 5px #0088ff;"></div>
+                                </div>
+                            </div>
+
+                            @if (pc.Drives != null)
+                            {
+                                @foreach (var drive in pc.Drives)
+                                {
+                                    double usedGb = drive.TotalSizeGb - drive.FreeSizeGb;
+                                    double usedPercent = drive.TotalSizeGb > 0 ? (usedGb / drive.TotalSizeGb) * 100 : 0;
+
+                                    <div class="mt-2">
+                                        <div class="d-flex justify-content-between text-white" style="font-size: 0.8rem;">
+                                            <span>@drive.DriveName</span>
+                                            <span>@drive.FreeSizeGb.ToString("0")GB free / @drive.TotalSizeGb.ToString("0")GB</span>
+                                        </div>
+                                        <div class="progress" style="height: 6px; background-color: #222; border-radius: 0;">
+                                            <div class="progress-bar" style="width: @usedPercent.ToString("0")%; background-color: #ffaa00; box-shadow: 0 0 5px #ffaa00;"></div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        }
+                        else
+                        {
+                            <div class="text-center mt-3" style="color: #555;">> СИГНАЛ ПОТЕРЯН</div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private Dictionary<string, MachineState> machines = new();
+    private HubConnection? hubConnection;
+    private bool isLoading = true;
+    private string errorMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInitialData();
+        await StartSignalRConnection();
+    }
+
+    private async Task LoadInitialData()
+    {
+        try
+        {
+            var response = await Http.GetAsync("/api/machines");
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ApiResponse<List<MachineState>>>();
+                if (result?.Data != null)
+                {
+                    foreach (var m in result.Data)
+                    {
+                        machines[m.Name] = m;
+                    }
+                }
+            }
+            else
+            {
+                errorMessage = "ОШИБКА ДОСТУПА. ТРЕБУЕТСЯ АВТОРИЗАЦИЯ.";
+            }
+        }
+        catch (Exception)
+        {
+            errorMessage = "НЕТ СВЯЗИ С ГЛАВНЫМ СЕРВЕРОМ.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task StartSignalRConnection()
+    {
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl("http://localhost:5000/rmmHub")
+            .Build();
+
+        hubConnection.On<string>("MachineDisconnected", (machineName) =>
+        {
+            if (machines.ContainsKey(machineName))
+            {
+                machines[machineName].Status = "Offline";
+                InvokeAsync(StateHasChanged);
+            }
+        });
+
+        hubConnection.On<string, string, string, double, double, string, string, string>(
+            "ReceiveUltraMetrics", (machineName, userName, osVersion, cpu, ramFree, drivesJson, cpuName, gpuName) =>
+        {
+            if (!machines.ContainsKey(machineName))
+            {
+                machines[machineName] = new MachineState { Name = machineName };
+            }
+
+            var pc = machines[machineName];
+            pc.Status = "Online";
+            pc.OsVersion = osVersion;
+            pc.CpuName = cpuName;
+            pc.GpuName = gpuName;
+            pc.CurrentCpu = cpu;
+            pc.CurrentRamFree = ramFree;
+
+            if (!string.IsNullOrEmpty(drivesJson))
+            {
+                try { pc.Drives = JsonSerializer.Deserialize<List<DriveInfoDto>>(drivesJson); }
+                catch { }
+            }
+
+            InvokeAsync(StateHasChanged);
+        });
+
+        try
+        {
+            await hubConnection.StartAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"> ОШИБКА СИГНАЛА: {ex.Message}");
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null) // <-- Вот оно, правильное условие без галлюцинаций!
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+
+    public class ApiResponse<T> { public bool Success { get; set; } public T? Data { get; set; } }
+    
+    public class MachineState
+    {
+        public string Name { get; set; } = "";
+        public string Status { get; set; } = "Offline";
+        public string OsVersion { get; set; } = "";
+        public string CpuName { get; set; } = "";
+        public string GpuName { get; set; } = "";
+        
+        public double CurrentCpu { get; set; }
+        public double CurrentRamFree { get; set; }
+        public List<DriveInfoDto>? Drives { get; set; }
+    }
+
+    public class DriveInfoDto
+    {
+        public string DriveName { get; set; } = "";
+        public double TotalSizeGb { get; set; }
+        public double FreeSizeGb { get; set; }
+    }
+}

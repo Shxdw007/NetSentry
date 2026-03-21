@@ -1,0 +1,38 @@
+﻿@page "/home"
+@inject HttpClient Http
+
+<PageTitle>NetSentry Dashboard</PageTitle>
+
+<h1>Панель мониторинга NetSentry</h1>
+
+<button class="btn btn-primary" @onclick="TestApi">Проверить связь с сервером</button>
+
+<p class="mt-3"><b>Ответ от сервера:</b> @ServerResponse</p>
+
+@code {
+    private string ServerResponse = "Пока нет ответа";
+
+    private async Task TestApi()
+    {
+        try
+        {
+            // Пытаемся получить список машин.
+            // Помнишь, мы закрыли этот метод [Authorize]?
+            // Поэтому без токена сервер нас пошлет и выдаст ошибку 401.
+            var response = await Http.GetAsync("/api/machines");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                ServerResponse = "Успешно! Доступ разрешен.";
+            }
+            else
+            {
+                ServerResponse = $"Ошибка доступа: {response.StatusCode}. Нужно авторизоваться!";
+            }
+        }
+        catch (Exception ex)
+        {
+            ServerResponse = $"Сервер недоступен: {ex.Message}";
+        }
+    }
+}

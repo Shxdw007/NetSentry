@@ -3,4 +3,5 @@
   <Project Path="NetSentry.Agent/NetSentry.Agent.csproj" />
   <Project Path="NetSentry.Dashboard/NetSentry.Dashboard.csproj" />
   <Project Path="NetSentry.Server/NetSentry.Server.csproj" />
+  <Project Path="NetSentry.Web/NetSentry.Web.csproj" Id="0fb2f4a2-e406-4031-8798-bf6ff11d8ed4" />
 </Solution>

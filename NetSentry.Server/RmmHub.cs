@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using System.Collections.Concurrent;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using NetSentry.Server.Data;
@@ -8,33 +9,41 @@ public class RmmHub : Hub
 {
     private readonly AppDbContext _db;
 
-    public RmmHub(AppDbContext db)
+
+    // 1. Словарь для связки: ConnectionId -> Имя машины (Решает проблему "вечного онлайна")
+    private static readonly ConcurrentDictionary<string, string> _connectedMachines = new();
+
+    // 2. Словарь для умного сохранения в БД раз в 30 секунд
+    private static readonly ConcurrentDictionary<string, DateTime> _lastDbSave = new(); public RmmHub(AppDbContext db)
     {
         _db = db;
     }
 
-    // Отслеживание подключения
     public override async Task OnConnectedAsync()
     {
         Console.WriteLine($"[CONNECT] Client connected: {Context.ConnectionId}");
         await base.OnConnectedAsync();
     }
 
-    //  Отслеживание отключения
+    // Правильное точечное отключение
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         Console.WriteLine($"[DISCONNECT] Client disconnected: {Context.ConnectionId}");
 
-        // Ставим все машины на "Offline"
-        var machines = await _db.Machines.ToListAsync();
-        foreach (var machine in machines)
+        // Достаем имя ПК по его ID подключения и сразу удаляем из словаря
+        if (_connectedMachines.TryRemove(Context.ConnectionId, out string disconnectedMachineName))
         {
-            machine.Status = "Offline";
-        }
-        await _db.SaveChangesAsync();
+            // Ищем только одну конкретную машину в БД
+            var machine = await _db.Machines.FirstOrDefaultAsync(m => m.Name == disconnectedMachineName);
+            if (machine != null)
+            {
+                machine.Status = "Offline";
+                await _db.SaveChangesAsync();
 
-        // Уведомляем всех что произошло отключение
-        await Clients.All.SendAsync("AllMachinesOffline");
+                // Уведомляем дашборд, что конкретно этот ПК отвалился
+                await Clients.All.SendAsync("MachineDisconnected", disconnectedMachineName);
+            }
+        }
 
         await base.OnDisconnectedAsync(exception);
     }
@@ -57,12 +66,12 @@ public class RmmHub : Hub
         string gpuName
     )
     {
-        Console.WriteLine($"[SERVER DEBUG] drivesJson = {drivesJson}");
-        Console.WriteLine($"[DATA] {machineName} | CPU: {cpu:F0}% | Drives JSON size {drivesJson.Length}");
+        // Привязываем текущее подключение к имени машины (если еще не привязано)
+        _connectedMachines.TryAdd(Context.ConnectionId, machineName);
 
         // 1. Находим или создаём запись о машине
-        var machine = await _db.Machines
-            .FirstOrDefaultAsync(m => m.Name == machineName);
+        var machine = await _db.Machines.FirstOrDefaultAsync(m => m.Name == machineName);
+        bool statusChanged = false; // Флаг для экономии запросов к БД
 
         if (machine == null)
         {
@@ -72,91 +81,98 @@ public class RmmHub : Hub
                 CpuName = cpuName,
                 GpuName = gpuName,
                 OsVersion = osVersion,
-                Status = "Online",  // ← НОВАЯ машина = Online
+                Status = "Online",
                 FirstConnected = DateTime.UtcNow,
                 LastConnected = DateTime.UtcNow
             };
 
             _db.Machines.Add(machine);
-
-            // ← ДОБАВЬ: Уведомляем что новая машина подключилась
+            statusChanged = true;
             await Clients.All.SendAsync("MachineConnected", machineName);
         }
         else
         {
+            // Обновляем статус только если он был Offline, чтобы не спамить БД каждую секунду
+            if (machine.Status != "Online")
+            {
+                machine.Status = "Online";
+                statusChanged = true;
+                await Clients.All.SendAsync("MachineReconnected", machineName);
+            }
+
             machine.CpuName = cpuName;
             machine.GpuName = gpuName;
             machine.OsVersion = osVersion;
-            machine.Status = "Online";  // ← Переводим обратно в Online
             machine.LastConnected = DateTime.UtcNow;
-
-            // ← ДОБАВЬ: Уведомляем что машина переподключилась
-            await Clients.All.SendAsync("MachineReconnected", machineName);
         }
 
         // 2. Сохраняем метрику
-        var metric = new Metric
+        // Проверяем, прошло ли 30 секунд с момента последней записи для этого ПК
+        bool shouldSaveToDb = false;
+        if (!_lastDbSave.TryGetValue(machineName, out var lastSaveTime) || (DateTime.UtcNow - lastSaveTime).TotalSeconds >= 30)
         {
-            Machine = machine,
-            CpuUsage = (float)cpu,
-            RamFree = (float)ramFree,
-            Timestamp = DateTime.UtcNow
-        };
-        _db.Metrics.Add(metric);
-
-        // 3. Обновляем информацию по дискам из JSON
-        List<DriveInfoDto>? drives = null;
-        try
-        {
-            drives = JsonSerializer.Deserialize<List<DriveInfoDto>>(drivesJson);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[WARN] Cannot parse drivesJson: {ex.Message}");
+            shouldSaveToDb = true;
+            _lastDbSave[machineName] = DateTime.UtcNow; // Обновляем таймер
         }
 
-        if (drives != null)
+        if (shouldSaveToDb)
         {
-            foreach (var d in drives)
+            var metric = new Metric
             {
-                if (string.IsNullOrWhiteSpace(d.DriveName))
-                    continue;
+                Machine = machine,
+                CpuUsage = (float)cpu,
+                RamFree = (float)ramFree,
+                Timestamp = DateTime.UtcNow
+            };
+            _db.Metrics.Add(metric);
+            // Диски тоже можно обернуть в этот if(shouldSaveToDb), чтобы не проверять их каждую секунду
+        }
+        // ----------------------------------------
 
-                var disk = await _db.Disks
-                    .FirstOrDefaultAsync(x =>
-                        x.MachineId == machine.Id && x.DriveName == d.DriveName);
+        if (shouldSaveToDb || statusChanged)
+        {
+            await _db.SaveChangesAsync();
+        }
 
-                if (disk == null)
+        // 4. Рассылаем данные на дашборд ВСЕГДА (каждую секунду для красивой анимации)
+        await Clients.All.SendAsync("ReceiveUltraMetrics", machineName, userName, osVersion, cpu, ramFree, drivesJson, cpuName, gpuName);
+
+        // 3. Обновляем информацию по дискам
+        if (!string.IsNullOrWhiteSpace(drivesJson))
+        {
+            try
+            {
+                var drives = JsonSerializer.Deserialize<List<DriveInfoDto>>(drivesJson);
+                if (drives != null)
                 {
-                    disk = new Disk
+                    foreach (var d in drives)
                     {
-                        Machine = machine,
-                        DriveName = d.DriveName,
-                        TotalSizeGb = d.TotalSizeGb,
-                        FreeSizeGb = d.FreeSizeGb
-                    };
-                    _db.Disks.Add(disk);
+                        if (string.IsNullOrWhiteSpace(d.DriveName)) continue;
+
+                        var disk = await _db.Disks.FirstOrDefaultAsync(x => x.MachineId == machine.Id && x.DriveName == d.DriveName);
+
+                        if (disk == null)
+                        {
+                            disk = new Disk { Machine = machine, DriveName = d.DriveName, TotalSizeGb = d.TotalSizeGb, FreeSizeGb = d.FreeSizeGb };
+                            _db.Disks.Add(disk);
+                        }
+                        else
+                        {
+                            disk.TotalSizeGb = d.TotalSizeGb;
+                            disk.FreeSizeGb = d.FreeSizeGb;
+                        }
+                    }
                 }
-                else
-                {
-                    disk.TotalSizeGb = d.TotalSizeGb;
-                    disk.FreeSizeGb = d.FreeSizeGb;
-                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[WARN] Cannot parse drivesJson: {ex.Message}");
             }
         }
 
         await _db.SaveChangesAsync();
 
         // 4. Рассылаем данные на дашборд
-        await Clients.All.SendAsync("ReceiveUltraMetrics",
-            machineName,
-            userName,
-            osVersion,
-            cpu,
-            ramFree,
-            drivesJson,
-            cpuName,
-            gpuName
-        );
+        await Clients.All.SendAsync("ReceiveUltraMetrics", machineName, userName, osVersion, cpu, ramFree, drivesJson, cpuName, gpuName);
     }
 }
