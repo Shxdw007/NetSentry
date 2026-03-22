@@ -9,5 +9,10 @@ public class Metric
 
     public float CpuUsage { get; set; }             // cpu_usage (0–100)
     public float RamFree { get; set; }              // ram_free в МБ
+
+    // --- НОВЫЕ ПОЛЯ ДЛЯ ТЕМПЕРАТУРЫ ---
+    public float CpuTemp { get; set; }
+    public float GpuTemp { get; set; }
+
     public DateTime Timestamp { get; set; }         // timestamp
 }

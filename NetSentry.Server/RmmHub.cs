@@ -10,7 +10,7 @@ public class RmmHub : Hub
     private readonly AppDbContext _db;
 
 
-    // 1. Словарь для связки: ConnectionId -> Имя машины (Решает проблему "вечного онлайна")
+    // 1. Словарь для связки: ConnectionId -> Имя машины 
     private static readonly ConcurrentDictionary<string, string> _connectedMachines = new();
 
     // 2. Словарь для умного сохранения в БД раз в 30 секунд
@@ -63,15 +63,15 @@ public class RmmHub : Hub
         double ramFree,
         string drivesJson,
         string cpuName,
-        string gpuName
+        string gpuName,
+        double cpuTemp, 
+        double gpuTemp  
     )
     {
-        // Привязываем текущее подключение к имени машины (если еще не привязано)
         _connectedMachines.TryAdd(Context.ConnectionId, machineName);
 
-        // 1. Находим или создаём запись о машине
         var machine = await _db.Machines.FirstOrDefaultAsync(m => m.Name == machineName);
-        bool statusChanged = false; // Флаг для экономии запросов к БД
+        bool statusChanged = false;
 
         if (machine == null)
         {
@@ -92,7 +92,6 @@ public class RmmHub : Hub
         }
         else
         {
-            // Обновляем статус только если он был Offline, чтобы не спамить БД каждую секунду
             if (machine.Status != "Online")
             {
                 machine.Status = "Online";
@@ -106,13 +105,11 @@ public class RmmHub : Hub
             machine.LastConnected = DateTime.UtcNow;
         }
 
-        // 2. Сохраняем метрику
-        // Проверяем, прошло ли 30 секунд с момента последней записи для этого ПК
         bool shouldSaveToDb = false;
         if (!_lastDbSave.TryGetValue(machineName, out var lastSaveTime) || (DateTime.UtcNow - lastSaveTime).TotalSeconds >= 30)
         {
             shouldSaveToDb = true;
-            _lastDbSave[machineName] = DateTime.UtcNow; // Обновляем таймер
+            _lastDbSave[machineName] = DateTime.UtcNow;
         }
 
         if (shouldSaveToDb)
@@ -122,22 +119,18 @@ public class RmmHub : Hub
                 Machine = machine,
                 CpuUsage = (float)cpu,
                 RamFree = (float)ramFree,
+                CpuTemp = (float)cpuTemp, 
+                GpuTemp = (float)gpuTemp, 
                 Timestamp = DateTime.UtcNow
             };
             _db.Metrics.Add(metric);
-            // Диски тоже можно обернуть в этот if(shouldSaveToDb), чтобы не проверять их каждую секунду
         }
-        // ----------------------------------------
 
         if (shouldSaveToDb || statusChanged)
         {
             await _db.SaveChangesAsync();
         }
 
-        // 4. Рассылаем данные на дашборд ВСЕГДА (каждую секунду для красивой анимации)
-        await Clients.All.SendAsync("ReceiveUltraMetrics", machineName, userName, osVersion, cpu, ramFree, drivesJson, cpuName, gpuName);
-
-        // 3. Обновляем информацию по дискам
         if (!string.IsNullOrWhiteSpace(drivesJson))
         {
             try
@@ -172,7 +165,7 @@ public class RmmHub : Hub
 
         await _db.SaveChangesAsync();
 
-        // 4. Рассылаем данные на дашборд
-        await Clients.All.SendAsync("ReceiveUltraMetrics", machineName, userName, osVersion, cpu, ramFree, drivesJson, cpuName, gpuName);
+        // Рассылаем данные на дашборд с новыми параметрами!
+        await Clients.All.SendAsync("ReceiveUltraMetrics", machineName, userName, osVersion, cpu, ramFree, drivesJson, cpuName, gpuName, cpuTemp, gpuTemp);
     }
 }

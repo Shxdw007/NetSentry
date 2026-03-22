@@ -95,7 +95,9 @@ while (true)
             ramFree,
             drivesJson,
             cpuName,
-            gpuName
+            gpuName,
+            cpuTemp, 
+            gpuTemp  
         );
 
         // Счётчик для БД
