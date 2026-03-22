@@ -61,6 +61,7 @@ namespace NetSentry.Dashboard
                         machine.RamFree = ram;
                         machine.CpuName = cpuName;
                         machine.GpuName = gpuName;
+                        machine.Status = "Online";
 
                         try
                         {
@@ -110,13 +111,14 @@ namespace NetSentry.Dashboard
                 });
             });
 
-            //  Обработчик отключения всех машин
-            connection.On("AllMachinesOffline", () =>
+            // Обработчик отключения конкретной машины
+            connection.On<string>("MachineDisconnected", (machineName) =>
             {
                 Application.Current.Dispatcher.Invoke(() =>
                 {
-                    Console.WriteLine($"[DASHBOARD] Все машины offline");
-                    foreach (var machine in Machines)
+                    Console.WriteLine($"[DASHBOARD] Машина отключилась: {machineName}");
+                    var machine = Machines.FirstOrDefault(m => m.Name == machineName);
+                    if (machine != null)
                     {
                         machine.Status = "Offline";
                     }

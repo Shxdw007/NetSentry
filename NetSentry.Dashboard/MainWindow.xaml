@@ -21,7 +21,7 @@
         <!-- HEADER -->
         <Border BorderBrush="#00FF41" BorderThickness="0,0,0,2" Padding="10">
             <DockPanel>
-                <TextBlock Text=">> NET_SENTRY_V2.1 " FontSize="28" FontWeight="Bold" DockPanel.Dock="Left">
+                <TextBlock Text=">> NET_SENTRY_V2.2 " FontSize="28" FontWeight="Bold" DockPanel.Dock="Left">
                     <TextBlock.Effect>
                         <DropShadowEffect Color="#00FF41" BlurRadius="15" ShadowDepth="0"/>
                     </TextBlock.Effect>
@@ -51,11 +51,37 @@
 
                                
                                 <!-- Статус -->
-                                <Border Background="#003300" BorderBrush="#00FF41" BorderThickness="1" HorizontalAlignment="Left" Padding="5,2" CornerRadius="3" Margin="0,0,0,10">
-                                    <TextBlock Text="ONLINE" FontSize="10" Foreground="White" FontWeight="Bold"/>
-                                </Border>
-                                
-                                <!-- Инфо о железе (CPU/GPU) -->
+                                <Border BorderThickness="1" HorizontalAlignment="Left" Padding="5,2" CornerRadius="3" Margin="0,0,0,10">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="#222222"/>
+                                            <Setter Property="BorderBrush" Value="#555555"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Status}" Value="Online">
+                                                    <Setter Property="Background" Value="#003300"/>
+                                                    <Setter Property="BorderBrush" Value="#00FF41"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+
+                                    <TextBlock FontSize="10" FontWeight="Bold">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text" Value="OFFLINE"/>
+                                                <Setter Property="Foreground" Value="#888888"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Status}" Value="Online">
+                                                        <Setter Property="Text" Value="ONLINE"/>
+                                                        <Setter Property="Foreground" Value="#00FF41"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                    </Border>
+
+                    <!-- Инфо о железе (CPU/GPU) -->
                                 <TextBlock Text="HARDWARE SPECS:" FontSize="10" Foreground="#444" Margin="0,5,0,2"/>
                                 <TextBlock Text="{Binding CpuName}" FontSize="10" Foreground="#888" TextWrapping="Wrap"/>
                                 <TextBlock Text="{Binding GpuName}" FontSize="10" Foreground="#888" TextWrapping="Wrap" Margin="0,2,0,0"/>
