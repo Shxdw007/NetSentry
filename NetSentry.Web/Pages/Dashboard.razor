@@ -1,6 +1,7 @@
 ﻿@page "/dashboard"
 @using Microsoft.AspNetCore.SignalR.Client
 @using System.Text.Json
+@using System.Text.Json.Serialization
 @implements IAsyncDisposable
 @inject HttpClient Http
 @inject NavigationManager NavManager
@@ -38,8 +39,18 @@
                         </div>
 
                         <div style="font-size: 0.85rem; color: #aaa;" class="mb-3">
-                            <div>> CPU: @pc.CpuName</div>
-                            <div>> GPU: @pc.GpuName</div>
+                            <div class="d-flex justify-content-between">
+                                <span>> CPU: @pc.CpuName</span>
+                                <span style="color: @(pc.CpuTemp >= 80 ? "#ff003c" : "#00ff00"); font-weight: bold; text-shadow: 0 0 5px @(pc.CpuTemp >= 80 ? "#ff003c" : "#00ff00");">
+                                    @(pc.CpuTemp > 0 ? $"{pc.CpuTemp.ToString("0")}°C" : "")
+                                </span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>> GPU: @pc.GpuName</span>
+                                <span style="color: @(pc.GpuTemp >= 80 ? "#ff003c" : "#00ff00"); font-weight: bold; text-shadow: 0 0 5px @(pc.GpuTemp >= 80 ? "#ff003c" : "#00ff00");">
+                                    @(pc.GpuTemp > 0 ? $"{pc.GpuTemp.ToString("0")}°C" : "")
+                                </span>
+                            </div>
                         </div>
 
                         @if (pc.Status == "Online")
@@ -152,39 +163,34 @@
             }
         });
 
-        hubConnection.On<string, string, string, double, double, string, string, string>(
-            "ReceiveUltraMetrics", (machineName, userName, osVersion, cpu, ramFree, drivesJson, cpuName, gpuName) =>
+        // Добавили два double в конце списка типов и cpuTemp, gpuTemp в переменные
+        // Теперь мы принимаем всего 1 параметр - наш объект MetricsPayload
+        hubConnection.On<MetricsPayload>("ReceiveUltraMetrics", (data) =>
         {
-            if (!machines.ContainsKey(machineName))
+            if (!machines.ContainsKey(data.MachineName))
             {
-                machines[machineName] = new MachineState { Name = machineName };
+                machines[data.MachineName] = new MachineState { Name = data.MachineName };
             }
 
-            var pc = machines[machineName];
+            var pc = machines[data.MachineName];
             pc.Status = "Online";
-            pc.OsVersion = osVersion;
-            pc.CpuName = cpuName;
-            pc.GpuName = gpuName;
-            pc.CurrentCpu = cpu;
-            pc.CurrentRamFree = ramFree;
+            pc.OsVersion = data.OsVersion;
+            pc.CpuName = data.CpuName;
+            pc.GpuName = data.GpuName;
+            pc.CurrentCpu = data.Cpu;
+            pc.CurrentRamFree = data.RamFree;
+            pc.CpuTemp = data.CpuTemp;
+            pc.GpuTemp = data.GpuTemp;
 
-            if (!string.IsNullOrEmpty(drivesJson))
+            if (!string.IsNullOrEmpty(data.DrivesJson))
             {
-                try { pc.Drives = JsonSerializer.Deserialize<List<DriveInfoDto>>(drivesJson); }
+                try { pc.Drives = JsonSerializer.Deserialize<List<DriveInfoDto>>(data.DrivesJson); }
                 catch { }
             }
 
             InvokeAsync(StateHasChanged);
         });
-
-        try
-        {
-            await hubConnection.StartAsync();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"> ОШИБКА СИГНАЛА: {ex.Message}");
-        }
+        await hubConnection.StartAsync();
     }
 
     public async ValueTask DisposeAsync()
@@ -207,6 +213,11 @@
         
         public double CurrentCpu { get; set; }
         public double CurrentRamFree { get; set; }
+        
+        // --- НОВЫЕ ПОЛЯ ДЛЯ ТЕМПЕРАТУРЫ ---
+        public double CpuTemp { get; set; }
+        public double GpuTemp { get; set; }
+        
         public List<DriveInfoDto>? Drives { get; set; }
     }
 
@@ -215,5 +226,38 @@
         public string DriveName { get; set; } = "";
         public double TotalSizeGb { get; set; }
         public double FreeSizeGb { get; set; }
+    }
+
+    public class MetricsPayload
+    {
+        [JsonPropertyName("machineName")]
+        public string MachineName { get; set; } = "";
+
+        [JsonPropertyName("userName")]
+        public string UserName { get; set; } = "";
+
+        [JsonPropertyName("osVersion")]
+        public string OsVersion { get; set; } = "";
+
+        [JsonPropertyName("cpu")]
+        public double Cpu { get; set; }
+
+        [JsonPropertyName("ramFree")]
+        public double RamFree { get; set; }
+
+        [JsonPropertyName("drivesJson")]
+        public string DrivesJson { get; set; } = "";
+
+        [JsonPropertyName("cpuName")]
+        public string CpuName { get; set; } = "";
+
+        [JsonPropertyName("gpuName")]
+        public string GpuName { get; set; } = "";
+
+        [JsonPropertyName("cpuTemp")]
+        public double CpuTemp { get; set; }
+
+        [JsonPropertyName("gpuTemp")]
+        public double GpuTemp { get; set; }
     }
 }

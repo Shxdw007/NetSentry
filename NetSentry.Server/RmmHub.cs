@@ -55,6 +55,20 @@ public class RmmHub : Hub
         public double FreeSizeGb { get; set; }
     }
 
+    public class MetricsPayload
+    {
+        public string MachineName { get; set; } = "";
+        public string UserName { get; set; } = "";
+        public string OsVersion { get; set; } = "";
+        public double Cpu { get; set; }
+        public double RamFree { get; set; }
+        public string DrivesJson { get; set; } = "";
+        public string CpuName { get; set; } = "";
+        public string GpuName { get; set; } = "";
+        public double CpuTemp { get; set; }
+        public double GpuTemp { get; set; }
+    }
+
     public async Task SendUltraMetrics(
         string machineName,
         string userName,
@@ -165,7 +179,21 @@ public class RmmHub : Hub
 
         await _db.SaveChangesAsync();
 
-        // Рассылаем данные на дашборд с новыми параметрами!
-        await Clients.All.SendAsync("ReceiveUltraMetrics", machineName, userName, osVersion, cpu, ramFree, drivesJson, cpuName, gpuName, cpuTemp, gpuTemp);
+        
+        var payload = new MetricsPayload
+        {
+            MachineName = machineName,
+            UserName = userName,
+            OsVersion = osVersion,
+            Cpu = cpu,
+            RamFree = ramFree,
+            DrivesJson = drivesJson,
+            CpuName = cpuName,
+            GpuName = gpuName,
+            CpuTemp = cpuTemp,
+            GpuTemp = gpuTemp
+        };
+
+        await Clients.All.SendAsync("ReceiveUltraMetrics", payload);
     }
 }

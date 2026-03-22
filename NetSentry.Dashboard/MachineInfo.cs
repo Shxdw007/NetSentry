@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Collections.ObjectModel; 
+using System.Collections.ObjectModel;
 
 namespace NetSentry.Dashboard
 {
@@ -9,6 +9,10 @@ namespace NetSentry.Dashboard
         private double _cpu;
         private double _ramFree;
         private string _status = "Online";
+
+        // --- НОВЫЕ ПЕРЕМЕННЫЕ ДЛЯ ТЕМПЕРАТУРЫ ---
+        private double _cpuTemp;
+        private double _gpuTemp;
 
         // Основная инфо
         public required string Name { get; set; }
@@ -43,6 +47,23 @@ namespace NetSentry.Dashboard
             set { _ramFree = value; OnPropertyChanged(); OnPropertyChanged(nameof(RamDisplay)); }
         }
 
+        // --- СВОЙСТВА ДЛЯ ТЕМПЕРАТУРЫ---
+        public double CpuTemp
+        {
+            get => _cpuTemp;
+            set { _cpuTemp = value; OnPropertyChanged(); OnPropertyChanged(nameof(CpuTempColor)); }
+        }
+
+        public double GpuTemp
+        {
+            get => _gpuTemp;
+            set { _gpuTemp = value; OnPropertyChanged(); OnPropertyChanged(nameof(GpuTempColor)); }
+        }
+
+        // Логика цветов (если >= 80, то красный, иначе фирменный зеленый)
+        public string CpuTempColor => CpuTemp >= 80 ? "#FF003C" : "#00FF41";
+        public string GpuTempColor => GpuTemp >= 80 ? "#FF003C" : "#00FF41";
+
         public string CpuDisplay => $"{Cpu:F0}%";
         public string RamDisplay => $"{RamFree:F0} MB";
 
@@ -62,5 +83,4 @@ namespace NetSentry.Dashboard
         public double UsagePercent => TotalSizeGb > 0 ? (1.0 - (FreeSizeGb / TotalSizeGb)) * 100 : 0;
         public string DisplayText => $"{DriveName} {FreeSizeGb:F0}GB free / {TotalSizeGb:F0}GB";
     }
-
 }

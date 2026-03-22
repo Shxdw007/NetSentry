@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Windows;
+using System.Text.Json.Serialization;
 
 namespace NetSentry.Dashboard
 {
@@ -42,30 +43,30 @@ namespace NetSentry.Dashboard
                 .Build();
 
             // Основной обработчик метрик
-            connection.On<string, string, string, double, double, string, string, string>(
-                "ReceiveUltraMetrics",
-                (name, user, os, cpu, ram, drivesJson, cpuName, gpuName) =>
+            connection.On<MetricsPayload>("ReceiveUltraMetrics", (data) =>
+            {
+                Application.Current.Dispatcher.Invoke(() =>
                 {
-                    Application.Current.Dispatcher.Invoke(() =>
+                    var machine = Machines.FirstOrDefault(m => m.Name == data.MachineName);
+                    if (machine == null)
                     {
-                        var machine = Machines.FirstOrDefault(m => m.Name == name);
-                        if (machine == null)
-                        {
-                            machine = new MachineInfo { Name = name };
-                            Machines.Add(machine);
-                        }
+                        machine = new MachineInfo { Name = data.MachineName };
+                        Machines.Add(machine);
+                    }
 
-                        machine.UserName = user;
-                        machine.OS = os;
-                        machine.Cpu = cpu;
-                        machine.RamFree = ram;
-                        machine.CpuName = cpuName;
-                        machine.GpuName = gpuName;
-                        machine.Status = "Online";
+                    machine.UserName = data.UserName;
+                    machine.OS = data.OsVersion;
+                    machine.Cpu = data.Cpu;
+                    machine.RamFree = data.RamFree;
+                    machine.CpuName = data.CpuName;
+                    machine.GpuName = data.GpuName;
+                    machine.Status = "Online";
+                    machine.CpuTemp = data.CpuTemp;
+                    machine.GpuTemp = data.GpuTemp;
 
-                        try
+                    try
                         {
-                            var disks = JsonSerializer.Deserialize<List<DiskInfo>>(drivesJson);
+                            var disks = JsonSerializer.Deserialize<List<DiskInfo>>(data.DrivesJson);
 
                             if (disks != null)
                             {
@@ -150,6 +151,39 @@ namespace NetSentry.Dashboard
                 // StatusBorder.Background = новый цвет
                 // StatusBorder.BorderBrush = #FF0000
             }
+        }
+
+        public class MetricsPayload
+        {
+            [JsonPropertyName("machineName")]
+            public string MachineName { get; set; } = "";
+
+            [JsonPropertyName("userName")]
+            public string UserName { get; set; } = "";
+
+            [JsonPropertyName("osVersion")]
+            public string OsVersion { get; set; } = "";
+
+            [JsonPropertyName("cpu")]
+            public double Cpu { get; set; }
+
+            [JsonPropertyName("ramFree")]
+            public double RamFree { get; set; }
+
+            [JsonPropertyName("drivesJson")]
+            public string DrivesJson { get; set; } = "";
+
+            [JsonPropertyName("cpuName")]
+            public string CpuName { get; set; } = "";
+
+            [JsonPropertyName("gpuName")]
+            public string GpuName { get; set; } = "";
+
+            [JsonPropertyName("cpuTemp")]
+            public double CpuTemp { get; set; }
+
+            [JsonPropertyName("gpuTemp")]
+            public double GpuTemp { get; set; }
         }
     }
 }
