@@ -151,7 +151,7 @@
     private async Task StartSignalRConnection()
     {
         hubConnection = new HubConnectionBuilder()
-            .WithUrl("http://localhost:5000/rmmHub")
+            .WithUrl("http://192.168.3.12/rmmHub")
             .Build();
 
         hubConnection.On<string>("MachineDisconnected", (machineName) =>
