@@ -38,7 +38,7 @@ namespace NetSentry.Dashboard
                 var json = JsonSerializer.Serialize(loginData);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var response = await client.PostAsync("http://localhost:5000/api/auth/login", content);
+                var response = await client.PostAsync("http://localhost/api/auth/login", content);
 
                 if (response.IsSuccessStatusCode)
                 {
