@@ -1,7 +1,7 @@
 ﻿<Window x:Class="NetSentry.Dashboard.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="NetSentry " Height="600" Width="900"
+        Title="NetSentry " Height="720" Width="900"
         Background="#000000">
 
     <Window.Resources>
@@ -38,13 +38,17 @@
                     <!-- Карточка ПК -->
                     <Border BorderBrush="#333" BorderThickness="1" CornerRadius="4" Background="#0A0A0A" Margin="0,5" Padding="15" Width="820">
                         <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="280"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
 
                             <!-- ЛЕВАЯ КОЛОНКА: ИНФО -->
-                            <StackPanel>
+                            <StackPanel Grid.Row="0" Grid.Column="0">
                                 <TextBlock Text="{Binding Name}" FontSize="22" FontWeight="Bold" Foreground="White"/>
                                 <TextBlock Text="{Binding UserName, StringFormat='USER: {0}'}" Foreground="#888" Margin="0,5,0,0"/>
                                 <TextBlock Text="{Binding OS}" Foreground="#555" FontSize="10" TextWrapping="Wrap" Margin="0,2,0,10"/>
@@ -96,7 +100,7 @@
                             </StackPanel>
 
                             <!-- ПРАВАЯ КОЛОНКА: МЕТРИКИ -->
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="20,0,0,0">
+                            <StackPanel Grid.Row="0" Grid.Column="1" VerticalAlignment="Center" Margin="20,0,0,0">
 
                                 <!-- CPU -->
                                 <DockPanel Margin="0,0,0,5">
@@ -117,12 +121,8 @@
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <DockPanel Margin="0,0,0,5">
-                                                <!-- Имя диска -->
                                                 <TextBlock Text="{Binding DriveName}" Width="70" Foreground="#AAA"/>
-
-                                                <!-- Текст -->
                                                 <TextBlock Text="{Binding DisplayText}" DockPanel.Dock="Right" Width="120" Foreground="White" FontSize="10" TextAlignment="Right"/>
-
                                                 <ProgressBar Value="{Binding UsagePercent, Mode=OneWay}" Maximum="100" Height="6" Background="#222" Foreground="#FFAA00" BorderThickness="0"/>
                                             </DockPanel>
                                         </DataTemplate>
@@ -130,6 +130,45 @@
                                 </ItemsControl>
 
                             </StackPanel>
+
+                        <!-- СЕТЬ: устройства агента -->
+                        <Border Grid.Row="1" Grid.ColumnSpan="2" Margin="0,12,0,0" Padding="10,8"
+                                Background="#050505" BorderBrush="#1a3d1a" BorderThickness="1" CornerRadius="3">
+                            <StackPanel>
+                                <TextBlock Text=">> NETWORK SCAN" FontSize="10" Foreground="#444" Margin="0,0,0,6"/>
+                                <ItemsControl ItemsSource="{Binding NetworkDevices}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" Margin="0,3">
+                                                <Ellipse Width="8" Height="8" Fill="#00FF41" Margin="0,2,10,0" VerticalAlignment="Top">
+                                                    <Ellipse.Effect>
+                                                        <DropShadowEffect Color="#00FF41" BlurRadius="6" ShadowDepth="0"/>
+                                                    </Ellipse.Effect>
+                                                </Ellipse>
+                                                <TextBlock Text="{Binding DisplayLine}"
+                                                           FontFamily="Consolas"
+                                                           FontSize="11"
+                                                           Foreground="#00FF41"
+                                                           TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <TextBlock Text="> нет устройств с MAC в последнем скане"
+                                           FontSize="10" Foreground="#333" Margin="0,4,0,0">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding NetworkDevices.Count}" Value="0">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
+                        </Border>
                         </Grid>
                     </Border>
                 </DataTemplate>

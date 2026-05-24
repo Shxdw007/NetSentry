@@ -1,49 +1,69 @@
 ﻿using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Configuration;
-using System.Collections.Generic;
+using NetSentry.Dashboard.Services;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using System.Windows;
 using System.Text.Json.Serialization;
+using System.Windows;
+using System.Windows.Threading;
 
 namespace NetSentry.Dashboard
 {
     public partial class MainWindow : Window
     {
-        HubConnection connection;
-        private readonly string _authToken; 
+        private HubConnection? _connection;
+        private readonly string _authToken;
+        private readonly NetworkDevicesService _networkDevicesService;
+        private readonly DispatcherTimer _networkRefreshTimer;
 
         public ObservableCollection<MachineInfo> Machines { get; set; } = new ObservableCollection<MachineInfo>();
 
         public MainWindow(string token)
         {
             InitializeComponent();
-            _authToken = token; 
+            _authToken = token;
             MachinesList.ItemsSource = Machines;
+
+            var config = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json", optional: true)
+                .Build();
+
+            string serverUrl = config["ServerUrl"] ?? "http://localhost:5000/rmmHub";
+            string apiBase = config["ApiUrl"] ?? serverUrl.Replace("/rmmHub", "", StringComparison.OrdinalIgnoreCase).TrimEnd('/');
+
+            _networkDevicesService = new NetworkDevicesService(apiBase, _authToken);
+
+            _networkRefreshTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(30)
+            };
+            _networkRefreshTimer.Tick += async (_, _) => await RefreshAllNetworkDevicesAsync();
+            _networkRefreshTimer.Start();
+
             InitializeSignalR();
         }
 
         private async void InitializeSignalR()
         {
             var config = new ConfigurationBuilder()
-              .SetBasePath(Directory.GetCurrentDirectory())
-              .AddJsonFile("appsettings.json", optional: true)
-              .Build();
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json", optional: true)
+                .Build();
 
             string serverUrl = config["ServerUrl"] ?? "http://localhost:5000/rmmHub";
 
-            connection = new HubConnectionBuilder()
+            _connection = new HubConnectionBuilder()
                 .WithUrl(serverUrl, options =>
                 {
-                    options.AccessTokenProvider = () => System.Threading.Tasks.Task.FromResult(_authToken);
+                    options.AccessTokenProvider = () => Task.FromResult(_authToken);
                 })
                 .WithAutomaticReconnect()
                 .Build();
 
-            // Основной обработчик метрик
-            connection.On<MetricsPayload>("ReceiveUltraMetrics", (data) =>
+            _connection.On<MetricsPayload>("ReceiveUltraMetrics", (data) =>
             {
                 Application.Current.Dispatcher.Invoke(() =>
                 {
@@ -65,91 +85,90 @@ namespace NetSentry.Dashboard
                     machine.GpuTemp = data.GpuTemp;
 
                     try
-                        {
-                            var disks = JsonSerializer.Deserialize<List<DiskInfo>>(data.DrivesJson);
-
-                            if (disks != null)
-                            {
-                                machine.Drives.Clear();
-                                foreach (var disk in disks)
-                                {
-                                    machine.Drives.Add(disk);
-                                }
-                            }
-                        }
-                        catch
-                        {
-                        }
-                    });
-                });
-
-            //  Обработчик новой машины
-            connection.On<string>("MachineConnected", (machineName) =>
-            {
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    Console.WriteLine($"[DASHBOARD] Машина подключилась: {machineName}");
-                    var machine = Machines.FirstOrDefault(m => m.Name == machineName);
-                    if (machine != null)
                     {
-                        machine.Status = "Online";
-                        UpdateMachineStatusUI(machine);
+                        var disks = JsonSerializer.Deserialize<List<DiskInfo>>(data.DrivesJson);
+                        if (disks != null)
+                        {
+                            machine.Drives.Clear();
+                            foreach (var disk in disks)
+                                machine.Drives.Add(disk);
+                        }
                     }
+                    catch
+                    {
+                    }
+
+                    _ = RefreshNetworkDevicesAsync(machine);
                 });
             });
 
-            // Обработчик переподключения
-            connection.On<string>("MachineReconnected", (machineName) =>
+            _connection.On<string>("MachineConnected", (machineName) =>
             {
                 Application.Current.Dispatcher.Invoke(() =>
                 {
-                    Console.WriteLine($"[DASHBOARD] Машина переподключилась: {machineName}");
                     var machine = Machines.FirstOrDefault(m => m.Name == machineName);
                     if (machine != null)
-                    {
                         machine.Status = "Online";
-                    }
                 });
             });
 
-            // Обработчик отключения конкретной машины
-            connection.On<string>("MachineDisconnected", (machineName) =>
+            _connection.On<string>("MachineReconnected", (machineName) =>
             {
                 Application.Current.Dispatcher.Invoke(() =>
                 {
-                    Console.WriteLine($"[DASHBOARD] Машина отключилась: {machineName}");
                     var machine = Machines.FirstOrDefault(m => m.Name == machineName);
                     if (machine != null)
-                    {
+                        machine.Status = "Online";
+                });
+            });
+
+            _connection.On<string>("MachineDisconnected", (machineName) =>
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    var machine = Machines.FirstOrDefault(m => m.Name == machineName);
+                    if (machine != null)
                         machine.Status = "Offline";
-                    }
                 });
             });
 
             try
             {
-                await connection.StartAsync();
+                await _connection.StartAsync();
                 Title = "NetSentry // Big brother is watching you";
-                Console.WriteLine("[DASHBOARD] Подключено к серверу");
+                await RefreshAllNetworkDevicesAsync();
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 MessageBox.Show($"Ошибка подключения: {ex.Message}");
             }
         }
-        private void UpdateMachineStatusUI(MachineInfo machine)
+
+        private async Task RefreshAllNetworkDevicesAsync()
         {
-            if (machine.Status == "Online")
+            foreach (var machine in Machines.ToList())
             {
-                // Зелёный
-                // StatusBorder.Background = новый цвет
-                // StatusBorder.BorderBrush = #00FF41
+                if (machine.Status == "Online")
+                    await RefreshNetworkDevicesAsync(machine);
             }
-            else
+        }
+
+        private async Task RefreshNetworkDevicesAsync(MachineInfo machine)
+        {
+            try
             {
-                // Красный
-                // StatusBorder.Background = новый цвет
-                // StatusBorder.BorderBrush = #FF0000
+                var devices = await _networkDevicesService.FetchDevicesAsync(machine.Name);
+
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    machine.NetworkDevices.Clear();
+                    foreach (var device in devices)
+                        machine.NetworkDevices.Add(device);
+                });
+            }
+            catch
+            {
+                // сеть недоступна или эндпоинт не отвечает — не ломаем UI
             }
         }
 

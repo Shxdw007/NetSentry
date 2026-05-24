@@ -35,6 +35,9 @@ namespace NetSentry.Dashboard
 
         public ObservableCollection<DiskInfo> Drives { get; set; } = new ObservableCollection<DiskInfo>();
 
+        public ObservableCollection<NetworkDeviceDto> NetworkDevices { get; set; } =
+            new ObservableCollection<NetworkDeviceDto>();
+
         public double Cpu
         {
             get => _cpu;
