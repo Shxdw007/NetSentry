@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NetSentry.Server.Data;
+using NetSentry.Server.Models;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -41,7 +42,7 @@ namespace NetSentry.Server.Controllers
 
             return Ok(metrics); // Отдаем чистый JSON
         }
-        
+
         // GET: api/metrics/current
         // Этот метод вернет список всех ПК и их САМЫЕ СВЕЖИЕ показатели
         [HttpGet("current")]
@@ -62,5 +63,34 @@ namespace NetSentry.Server.Controllers
 
             return Ok(machines);
         }
-    }       
+        // POST: api/metrics
+        // Этот метод будет принимать данные от C#-агентов и JMeter
+        [HttpPost]
+        [AllowAnonymous] // Разрешаем агентам слать данные без авторизации для тестов
+        public async Task<IActionResult> AddMetric([FromBody] MetricDto request)
+        {
+            // Убедись, что свойства (CpuTemp и т.д.) совпадают с твоей моделью Metric
+            var newMetric = new Metric
+            {
+                MachineId = request.MachineId, 
+                Timestamp = DateTime.UtcNow,
+                CpuTemp = request.CpuTemp,
+                GpuTemp = request.GpuTemp
+            };
+
+            _context.Metrics.Add(newMetric);
+            await _context.SaveChangesAsync();
+
+            // Возвращаем статус 201 (Создано) - именно его ждет JMeter в нашем тест-кейсе
+            return StatusCode(201, newMetric);
+        }
+
+        // Класс-шаблон для приема JSON
+        public class MetricDto
+        {
+            public int MachineId { get; set; }
+            public float CpuTemp { get; set; } // Поменяли double на float
+            public float GpuTemp { get; set; } // Поменяли double на float
+        }
+    }
 }
